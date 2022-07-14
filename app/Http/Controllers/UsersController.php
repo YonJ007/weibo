@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 
 class UsersController extends Controller
 {
@@ -12,11 +13,16 @@ class UsersController extends Controller
     public function __construct()
     {
         $this->middleware('auth',[
-            'except'=>['create','store','index']
+            'except'=>['create','store','confirmEmail']
         ]);
 
         $this->middleware('guest', [
             'only' => ['create']
+        ]);
+
+        // 限流 一个小时内只能提交 10 次请求；
+        $this->middleware('throttle:10,60', [
+            'only' => ['store']
         ]);
     }
 
@@ -48,7 +54,8 @@ class UsersController extends Controller
             'email'=>$request->email,
             'password'=>bcrypt($request->password)
         ]);
-        Auth::login($user);
+        //Auth::login($user);
+        $this->sendEmailConfirmationTo($user);
         session()->flash('success','恭喜您，注册成功');
         return redirect()->route('users.show',[$user]);
     }
@@ -85,5 +92,30 @@ class UsersController extends Controller
         $user->delete();
         session()->flash('success','成功删除用户！');
         return back();
+    }
+
+    public function confirmEmail($token)
+    {
+        $user = User::where('activation_token',$token)->firstOrFail();
+
+        $user->activated = true;
+        $user->activation_token = null;
+        $user->save();
+
+        Auth::login($user);
+        session()->flash('success','恭喜您，激活成功');
+        return redirect()->route('users.show',[$user]);
+    }
+
+    protected function sendEmailConfirmationTo($user){
+        $view = 'users.confirm';
+        $data = compact('user');
+        $from = '2802309050@qq.com';
+        $name = 'YonJ';
+        $to = $user->email;
+        $subject = "感谢注册weibo应用！请确认你的邮箱。";
+        Mail::send($view,$data,function($message) use ($from,$name,$to,$subject){
+            $message->from($from,$name)->to($to)->subject($subject);
+        });
     }
 }
