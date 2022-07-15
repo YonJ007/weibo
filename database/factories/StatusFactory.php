@@ -20,7 +20,7 @@ class StatusFactory extends Factory
     {
         $date_time = $this->faker->date . ' ' . $this->faker->time;
         return [
-            'user_id'    => $this->faker->randomElement(['1','2','3']),
+            'user_id'    => $this->faker->randomElement(['4','5','6']),
             'content'    => $this->faker->text(),
             'created_at' => $date_time,
             'updated_at' => $date_time,
